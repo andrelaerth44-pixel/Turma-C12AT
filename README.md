@@ -44,9 +44,9 @@ As Edge Functions ativas são:
 - `generate-mindmap`
 - `process-material`
 
-O modelo configurável padrão é `nvidia/llama-3.3-nemotron-super-49b-v1.5`. A NVIDIA documenta esse modelo na matriz atual de NIMs; o identificador pode ser alterado no backend sem alterar o APK. citeturn0search0turn0search4
+O modelo configurável padrão é `nvidia/llama-3.3-nemotron-super-49b-v1.5`. O identificador pode ser alterado no backend sem alterar o APK.
 
-A API é chamada pelo endpoint OpenAI-compatible da NVIDIA. A chave deve existir somente como secret `NVIDIA_API_KEY` nas Edge Functions; nunca coloque uma chave NVIDIA no Flutter. citeturn1search0
+A API é chamada pelo endpoint OpenAI-compatible da NVIDIA. A chave deve existir somente como secret `NVIDIA_API_KEY` nas Edge Functions; nunca coloque uma chave NVIDIA no Flutter.
 
 ## Supabase
 
