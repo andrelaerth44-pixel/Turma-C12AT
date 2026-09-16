@@ -1,75 +1,88 @@
 # Turma C12AT
 
-Aplicativo móvel coletivo para uma única turma escolar: conversa da turma, materiais, estudo assistido por IA e administração.
+Aplicativo móvel coletivo para uma única turma escolar: conversa coletiva, materiais, estudo assistido por IA e administração.
 
 ## Stack
 
 - Flutter + Dart
 - Material 3
 - Supabase Auth, PostgreSQL, Storage e Realtime
-- Row Level Security (RLS)
-- Edge Functions para operações privilegiadas e IA
-- FCM para notificações push
-- ML Kit para OCR no dispositivo quando apropriado
+- RLS em todas as tabelas públicas
+- Supabase Edge Functions para IA e processamento
+- NVIDIA NIM como provedor de LLM no backend
+- Arquitetura `AIService` para trocar o modelo sem reescrever a app
 
-## Base Supabase reutilizada
+## Interface
 
-O projeto vai reaproveitar a infraestrutura de autenticação do Supabase usada anteriormente no Product Hub, mantendo:
+A interface combina Liquid Glass e Neomorphism sem `BackdropFilter`, sem blur e sem camada branca sobre o conteúdo. As superfícies são construídas com cor, bordas e sombras físicas leves. Há tema claro/escuro, navegação inferior, estados vazios/carregando/erro e animações discretas.
 
-- login por e-mail e senha;
-- login com Google;
-- projeto Supabase e configuração de Auth já existentes;
-- credenciais públicas necessárias para o cliente Flutter.
+## Funcionalidades implementadas
 
-Os recursos específicos do Product Hub (organizações, vitrines, produtos, categorias, analytics e imagens de produtos) não fazem parte do Turma C12AT e serão removidos do banco. Os usuários do Supabase Auth não são apagados, para preservar o login existente.
+- Login por e-mail e palavra-passe
+- Cadastro de conta com perfil
+- Login Google via Supabase OAuth
+- Criação de turma com código de convite
+- Entrada por código com aprovação do administrador
+- Início com métricas reais de mensagens, materiais e membros
+- Uma conversa coletiva por turma
+- Mensagens em tempo real via Supabase Realtime
+- Apagar as próprias mensagens
+- Upload de materiais para Storage privado
+- Listagem de materiais por turma
+- Estudo com IA
+- Resumo, quiz e mapa mental por material
+- Assistente de estudo contextual
+- Perfil e encerramento de sessão
 
 ## IA
 
-A IA é acessada exclusivamente pelo backend/Edge Functions. A chave NVIDIA nunca é colocada no APK.
+As Edge Functions ativas são:
 
-O aplicativo usa uma camada `AIService`, permitindo trocar o modelo sem alterar o restante da aplicação. O alvo atual é um modelo Llama servido pela NVIDIA, priorizando velocidade e capacidade de raciocínio; o identificador fica em configuração de backend para permitir atualização sem publicar um novo APK.
+- `ask-study-ai`
+- `generate-summary`
+- `generate-quiz`
+- `generate-mindmap`
+- `process-material`
 
-## Regras do produto
+O modelo configurável padrão é `nvidia/llama-3.3-nemotron-super-49b-v1.5`. A NVIDIA documenta esse modelo na matriz atual de NIMs; o identificador pode ser alterado no backend sem alterar o APK. citeturn0search0turn0search4
 
-- Uma instalação pertence a uma turma autorizada.
-- Uma única conversa coletiva por turma.
-- Sem mensagens privadas, grupos secundários, canais ou comunidades.
-- Segredos de IA e credenciais privilegiadas nunca ficam no aplicativo.
-- Toda tabela exposta ao Data API terá RLS.
-- O cliente não trata mensagens como enviadas antes da confirmação do servidor.
+A API é chamada pelo endpoint OpenAI-compatible da NVIDIA. A chave deve existir somente como secret `NVIDIA_API_KEY` nas Edge Functions; nunca coloque uma chave NVIDIA no Flutter. citeturn1search0
 
-## Estrutura
+## Supabase
 
-```text
-lib/
-  core/
-    config/
-    constants/
-    errors/
-    network/
-    theme/
-    utils/
-    widgets/
-  features/
-    auth/
-    onboarding/
-    home/
-    chat/
-    messages/
-    materials/
-    ai_study/
-    profile/
-    notifications/
-    administration/
-  services/
-  main.dart
+Projeto: `fmqdyaoqttvubynmjbxt`.
 
-supabase/
-  migrations/
-  functions/
-  seed.sql
-```
+Tabelas principais: `profiles`, `classes`, `class_members`, `messages`, `message_reactions`, `attachments`, `materials`, `ai_analyses`, `quizzes`, `quiz_questions`, `quiz_attempts`, `announcements`, `notifications` e `reports`.
 
-## Estado atual
+Os buckets privados são `avatars`, `materials`, `chat-media`, `documents`, `audio` e `video`.
 
-A base Flutter inicial e a navegação principal já foram criadas. A próxima implementação transforma o shell em módulos reais, reaproveita o Auth do Supabase do Product Hub e substitui todo o modelo de dados de loja pelo modelo escolar do Turma C12AT.
+Todas as tabelas públicas atuais estão com RLS habilitado. O acesso é condicionado à autenticação e à pertença à turma.
+
+## Segurança
+
+- Chaves privilegiadas ficam no backend.
+- O APK usa apenas a chave publicável do Supabase.
+- Não são usados `user_metadata` para autorização.
+- Arquivos ficam em buckets privados.
+- Edge Functions exigem JWT.
+- Uma turma não pode consultar dados de outra turma através das políticas RLS.
+
+## Android
+
+O repositório inclui workflow de CI para gerar o projeto Android, executar `flutter pub get`, `flutter analyze` e gerar `app-release.apk` como artefato. O Android é gerado pelo Flutter no CI porque o repositório inicial foi criado sem a pasta de plataforma.
+
+## Configuração obrigatória da IA
+
+No projeto Supabase, configure o secret backend:
+
+`NVIDIA_API_KEY`
+
+Opcionalmente, defina:
+
+`NVIDIA_MODEL=nvidia/llama-3.3-nemotron-super-49b-v1.5`
+
+A configuração de secrets não é gravada no GitHub.
+
+## Regra de produto
+
+Uma instalação pertence a uma turma autorizada e existe apenas uma conversa coletiva por turma. Não há mensagens privadas, grupos secundários, canais ou comunidades.
