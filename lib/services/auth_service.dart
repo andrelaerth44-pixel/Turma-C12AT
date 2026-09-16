@@ -1,25 +1,20 @@
+import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
   final SupabaseClient client;
   AuthService(this.client);
-
   User? get user => client.auth.currentUser;
 
   Future<AuthResponse> signIn(String email, String password) => client.auth.signInWithPassword(email: email.trim(), password: password);
 
   Future<AuthResponse> signUp(String email, String password, String name) async {
     final response = await client.auth.signUp(email: email.trim(), password: password, data: {'full_name': name.trim()});
-    if (response.user != null) {
-      await client.from('profiles').upsert({'id': response.user!.id, 'full_name': name.trim()});
-    }
+    if (response.user != null) await client.from('profiles').upsert({'id': response.user!.id, 'full_name': name.trim()});
     return response;
   }
 
-  Future<void> signInWithGoogle() async {
-    await client.auth.signInWithOAuth(OAuthProvider.google, redirectTo: 'turmac12at://login-callback');
-  }
-
+  Future<void> signInWithGoogle() => client.auth.signInWithOAuth(OAuthProvider.google, redirectTo: 'turmac12at://login-callback');
   Future<void> signOut() => client.auth.signOut();
 
   Future<Map<String, dynamic>?> profile() async {
@@ -37,16 +32,16 @@ class AuthService {
 
   Future<Map<String, dynamic>> createClass({required String name, String description = '', String institution = '', String schoolYear = ''}) async {
     final u = user!;
-    final code = '${name.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase().substring(0, name.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').length.clamp(0, 4))}-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(3, 7)}';
+    final clean = name.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
+    final prefix = clean.isEmpty ? 'TURMA' : clean.substring(0, min(4, clean.length));
+    final suffix = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(2, 6);
+    final code = '$prefix-${DateTime.now().year}-$suffix';
     final cls = await client.from('classes').insert({'name': name.trim(), 'description': description.trim(), 'institution': institution.trim(), 'school_year': schoolYear.trim(), 'invite_code': code, 'created_by': u.id}).select().single();
     await client.from('class_members').insert({'class_id': cls['id'], 'user_id': u.id, 'role': 'admin', 'status': 'approved'});
     return Map<String, dynamic>.from(cls);
   }
 
   Future<void> requestJoin(String code) async {
-    final u = user!;
-    final cls = await client.from('classes').select('id').eq('invite_code', code.trim().toUpperCase()).eq('status', 'active').maybeSingle();
-    if (cls == null) throw Exception('Código da turma inválido.');
-    await client.from('class_members').upsert({'class_id': cls['id'], 'user_id': u.id, 'role': 'student', 'status': 'pending'}, onConflict: 'class_id,user_id');
+    await client.rpc('join_class_by_code', params: {'p_code': code.trim().toUpperCase()});
   }
 }
