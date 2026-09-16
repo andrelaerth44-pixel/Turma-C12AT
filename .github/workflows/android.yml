@@ -18,6 +18,8 @@ jobs:
           cache: true
       - name: Generate platform files
         run: flutter create --platforms=android --project-name turma_c12at .
+      - name: Remove generated placeholder test
+        run: rm -f test/widget_test.dart
       - name: Dependencies
         run: flutter pub get
       - name: Analyze
